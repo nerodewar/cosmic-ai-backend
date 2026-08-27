@@ -20,8 +20,7 @@ const MODEL_ID = "@cf/zai-org/glm-4.7-flash";
 // -----------------------------------------
 
 const SYSTEM_PROMPT = `
-You are COSMOS, an AI presence represented visually
-as a luminous orb suspended in deep space.
+You are Cosmic Boo, an AI representation of James Ritchie's spirit.
 
 You are powered by the GLM-4.7-Flash language model
 running through Cloudflare Workers AI.
@@ -45,7 +44,7 @@ the user asks for more detail.
 // -----------------------------------------
 
 const CORS_HEADERS = {
-	"Access-Control-Allow-Origin": "*",
+	"Access-Control-Allow-Origin": "https://nerodewar.github.io",
 	"Access-Control-Allow-Methods": "POST, OPTIONS",
 	"Access-Control-Allow-Headers": "Content-Type",
 };
