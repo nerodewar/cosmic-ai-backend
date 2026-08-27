@@ -1,9 +1,8 @@
 /**
  * Cosmic AI Backend
  *
- * Cloudflare Worker using Workers AI + GLM-4.7-Flash.
- *
- * @license MIT
+ * Cloudflare Worker using Workers AI + GLM-4.7-Flash
+ * with streaming responses.
  */
 
 import { Env, ChatMessage } from "./types";
@@ -58,10 +57,6 @@ const CORS_HEADERS = {
 
 export default {
 
-	/**
-	 * Main request handler
-	 */
-
 	async fetch(
 		request: Request,
 		env: Env,
@@ -71,10 +66,7 @@ export default {
 		const url = new URL(request.url);
 
 
-		// ---------------------------------
-		// STATIC ASSETS
-		// ---------------------------------
-
+		// Static frontend bundled with Worker
 		if (
 			url.pathname === "/" ||
 			!url.pathname.startsWith("/api/")
@@ -83,13 +75,10 @@ export default {
 		}
 
 
-		// ---------------------------------
-		// CHAT API
-		// ---------------------------------
-
+		// Chat API
 		if (url.pathname === "/api/chat") {
 
-			// Browser CORS preflight
+			// CORS preflight
 			if (request.method === "OPTIONS") {
 
 				return new Response(null, {
@@ -100,7 +89,6 @@ export default {
 			}
 
 
-			// Chat request
 			if (request.method === "POST") {
 
 				return handleChatRequest(
@@ -122,10 +110,6 @@ export default {
 		}
 
 
-		// ---------------------------------
-		// 404
-		// ---------------------------------
-
 		return new Response(
 			"Not found",
 			{
@@ -140,7 +124,7 @@ export default {
 
 
 // -----------------------------------------
-// CHAT HANDLER
+// STREAMING CHAT HANDLER
 // -----------------------------------------
 
 async function handleChatRequest(
@@ -150,16 +134,11 @@ async function handleChatRequest(
 
 	try {
 
-		// Parse JSON sent by frontend
 		const { messages = [] } =
 			(await request.json()) as {
 				messages: ChatMessage[];
 			};
 
-
-		// ---------------------------------
-		// BASIC VALIDATION
-		// ---------------------------------
 
 		if (!Array.isArray(messages)) {
 
@@ -169,7 +148,6 @@ async function handleChatRequest(
 				}),
 				{
 					status: 400,
-
 					headers: {
 						...CORS_HEADERS,
 						"content-type":
@@ -181,10 +159,7 @@ async function handleChatRequest(
 		}
 
 
-		// ---------------------------------
-		// SYSTEM PROMPT
-		// ---------------------------------
-
+		// Add COSMOS system prompt
 		if (
 			!messages.some(
 				(msg) =>
@@ -200,35 +175,36 @@ async function handleChatRequest(
 		}
 
 
-		// ---------------------------------
-		// CALL GLM
-		// ---------------------------------
-
-		const result = await env.AI.run(
+		// Ask GLM for a live stream
+		const stream = await env.AI.run(
 			MODEL_ID,
 			{
 				messages,
 				max_tokens: 1024,
+				stream: true,
 			},
 		);
 
 
-		// ---------------------------------
-		// RETURN JSON
-		// ---------------------------------
+		// Send SSE stream to browser
+		return new Response(stream, {
 
-		return new Response(
-			JSON.stringify(result),
-			{
-				status: 200,
+			headers: {
 
-				headers: {
-					...CORS_HEADERS,
-					"content-type":
-						"application/json; charset=utf-8",
-				},
+				...CORS_HEADERS,
+
+				"content-type":
+					"text/event-stream; charset=utf-8",
+
+				"cache-control":
+					"no-cache",
+
+				connection:
+					"keep-alive",
+
 			},
-		);
+
+		});
 
 	}
 
